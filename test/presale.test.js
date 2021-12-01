@@ -15,6 +15,7 @@ const feeList = [10, 10, 80];
 
 describe("Presale & NFT contract", function () {
     beforeEach(async function () {
+        this.accounts = await ethers.getSigners();
         const Presale = await ethers.getContractFactory("Presale");
         const Maskbyte = await ethers.getContractFactory("Maskbyte");
 
@@ -64,6 +65,22 @@ describe("Presale & NFT contract", function () {
         expect(totalMembers.length === 1);
     });
 
+    it("should allow users to refund after presale ends", async function () {
+        const mintPrice = await this.presale.mintPrice();
+        let total = 0;
+
+        for (let account of this.accounts) {
+            if (total < 5) {
+                await this.presale.connect(account).deposit({ value: mintPrice });
+            }
+            total++;
+        }
+
+        await this.presale.connect(this.accounts[0]).refund();
+        const balance = (await this.presale.whitelist(this.accounts[0].address))["amount"];
+        expect(balance.eq(BigNumber.from("0")));
+    });
+
     it("should fail, if the user deposits more than 0.1 ETH", async function () {
         await truffleAssert.fails(
             this.presale.deposit({
@@ -73,7 +90,7 @@ describe("Presale & NFT contract", function () {
         );
     });
 
-    it("should fail, if the user tries to deposit less than 0.1 ETH", async function() {
+    it("should fail, if the user tries to deposit less than 0.1 ETH", async function () {
         await truffleAssert.fails(
             this.presale.deposit({
                 value: ethers.utils.parseEther("0.2")
@@ -82,19 +99,19 @@ describe("Presale & NFT contract", function () {
         );
     });
 
-    it("should fail, if the user tries to deposit twice", async function() {
+    it("should fail, if the user tries to deposit twice", async function () {
         // 1) first deposit
         const mintPrice = await this.presale.mintPrice();
-        await this.presale.deposit({value: mintPrice });
+        await this.presale.deposit({ value: mintPrice });
 
         // 2) second deposit fails
         await truffleAssert.fails(
-            this.presale.deposit({value: mintPrice}),
+            this.presale.deposit({ value: mintPrice }),
             "Presale: You already deposit 0.1 ETH."
         );
     });
 
-    it("should fail, if the presale has not ended", async function() {
+    it("should fail, if the presale has not ended", async function () {
         await truffleAssert.fails(
             this.presale.refund(),
             "Presale: You can only claim after the presale ends."
@@ -102,19 +119,39 @@ describe("Presale & NFT contract", function () {
     });
 
     it("should fail, if user didn\'t deposit ether", async function () {
-        const accounts = await ethers.getSigners();
         const mintPrice = await this.presale.mintPrice();
         let total = 0;
 
-        for (let account of accounts) {
+        for (let account of this.accounts) {
             if (total < 5) {
-                await this.presale.connect(account).deposit({value: mintPrice});
+                await this.presale.connect(account).deposit({ value: mintPrice });
             }
             total++;
         }
+
         await truffleAssert.fails(
-            this.presale.connect(accounts[5]).refund(),
+            this.presale.connect(this.accounts[5]).refund(),
             "Presale: There is nothing to be withdrawn."
         );
+    });
+
+    it("should fail, if user tries to deposit after all positions are taken", async function () {
+        const mintPrice = await this.presale.mintPrice();
+        let total = 0;
+
+        for (let account of this.accounts) {
+            if (total < 5) {
+                await this.presale.connect(account).deposit({ value: mintPrice });
+            }
+
+            if (total == 6) {
+                await truffleAssert.fails(
+                    this.presale.connect(account).deposit({ value: mintPrice }),
+                    "Presale: 10,000 positions have been reserved."
+                );
+            }
+            total++;
+        }
+
     });
 });
