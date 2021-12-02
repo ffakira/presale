@@ -69,16 +69,30 @@ describe("Presale & NFT contract", function () {
         const mintPrice = await this.presale.mintPrice();
         let total = 0;
 
+        // 1) Deposit for 5 accounts (id 0 to 4)
         for (let account of this.accounts) {
             if (total < 5) {
                 await this.presale.connect(account).deposit({ value: mintPrice });
             }
             total++;
         }
-
+        
+        // 2) Check if the id is 4 (last index)
+        expect((await this.presale.whitelist(this.accounts[4].address))["id"].eq(BigNumber.from("4")));
+        
+        // 3) refund the account
         await this.presale.connect(this.accounts[0]).refund();
-        const balance = (await this.presale.whitelist(this.accounts[0].address))["amount"];
-        expect(balance.eq(BigNumber.from("0")));
+        const contractBalance = (await this.presale.whitelist(this.accounts[0].address))["amount"];
+
+        // 4) check the balance is 0
+        expect(contractBalance.eq(BigNumber.from("0")));
+
+        // 5) check the if the last element, went to the correct index of the refund user
+        expect((await this.presale.whitelist(this.accounts[4].address))["id"].eq(BigNumber.from("0")));
+
+        // 6) check the refunded user `isVerified` is set to false
+        expect((await this.presale.whitelist(this.accounts[0].address))["isVerified"] === false);
+
     });
 
     it("should fail, if the user deposits more than 0.1 ETH", async function () {
@@ -152,6 +166,5 @@ describe("Presale & NFT contract", function () {
             }
             total++;
         }
-
     });
 });
