@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
-pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./Presale.sol";
 
 contract Maskbyte is ERC1155 {
     Presale presale;
-    using Counters for Counters.Counter;
-    Counters.Counter public _ids;
     
     string revealedURI;
     string placeholderURI;
@@ -32,10 +28,13 @@ contract Maskbyte is ERC1155 {
 
     function mint() public {
         require(presale.getAmount(_msgSender()) == presale.mintPrice(), "Maskbyte: You have not joined presale.");
-        // require(presale);
-        require(_ids.current() < 10000, "Maskbyte: There can be only 10000 MaskBytes.");
-        _mint(_msgSender(), _ids.current(), 1, "");
-        _ids.increment();
+        address _callee = _msgSender();
+        
+        for (uint256 i = 0; i < presale.getTotalMembers().length; i++) {
+            if(_callee == presale.getTotalMembers()[i].owner) {
+                _mint(_callee, i, 1, "");
+            }
+        }
     }
 
     function uri(uint256 _tokenId) override public view returns (string memory) {

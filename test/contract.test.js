@@ -13,30 +13,22 @@ const accounts = [
 
 const feeList = [10, 10, 80];
 
-describe("Presale & NFT contract", function () {
+/**
+ * @dev Presale.sol unit test
+ */
+describe("Presale contract", function () {
     beforeEach(async function () {
         this.accounts = await ethers.getSigners();
         const Presale = await ethers.getContractFactory("Presale");
-        const Maskbyte = await ethers.getContractFactory("Maskbyte");
 
         /**
          * @dev for testing purpose maximum of 5 NFTs are going to be minted.
          */
         this.presale = await Presale.deploy(
             BigNumber.from("5"),
-            ethers.utils.parseEther("0.1"),
+            ethers.utils.parseEther(BigNumber.from("0.1")),
             accounts,
             feeList
-        );
-
-        /**
-         * @TODO refactor the placeholder image
-         */
-        this.maskbyte = await Maskbyte.deploy(
-            this.presale.address,
-            30,
-            "https://a.com/",
-            "http://b.com/"
         );
     });
 
@@ -69,7 +61,7 @@ describe("Presale & NFT contract", function () {
         const mintPrice = await this.presale.mintPrice();
         let total = 0;
 
-        // 1) Deposit for 5 accounts (id 0 to 4)
+        // 1) Deposit 0.1 eth for 5 accounts (id 0 to 4)
         for (let account of this.accounts) {
             if (total < 5) {
                 await this.presale.connect(account).deposit({ value: mintPrice });
@@ -92,6 +84,9 @@ describe("Presale & NFT contract", function () {
 
         // 6) check the refunded user `isVerified` is set to false
         expect((await this.presale.whitelist(this.accounts[0].address))["isVerified"] === false);
+
+        // 7) check the last user index `isVerified` is set to true
+        expect((await this.presale.whitelist(this.accounts[4].address))["isVerified"] === true);
 
     });
 
@@ -154,9 +149,7 @@ describe("Presale & NFT contract", function () {
         let total = 0;
 
         for (let account of this.accounts) {
-            if (total < 5) {
-                await this.presale.connect(account).deposit({ value: mintPrice });
-            }
+            if (total < 5) await this.presale.connect(account).deposit({ value: mintPrice });
 
             if (total == 6) {
                 await truffleAssert.fails(
@@ -167,4 +160,39 @@ describe("Presale & NFT contract", function () {
             total++;
         }
     });
+});
+
+/**
+ * @dev Maskbyte.sol unit test
+ */
+describe("NFT contract", function() {
+    beforeEach(async function() {
+        this.accounts = await ethers.getSigners();
+        const Maskbyte = await ethers.getContractFactory("Maskbyte");
+        const Presale = await ethers.getContractFactory("Presale");
+
+        /**
+         * @dev for testing purpose maximum of 5 NFTs are going to be minted.
+         */
+        this.presale = await Presale.deploy(
+            BigNumber.from("5"),
+            ethers.utils.parseEther(BigNumber.from("0.1")),
+            accounts,
+            feeList
+        );
+
+        /**
+         * @TODO refactor the placeholder image
+         */
+        this.maskbyte = await Maskbyte.deploy(
+            this.presale.address,
+            BigNumber.from("30"),
+            "https://a.com/",
+            "http://b.com/"
+        );
+    });
+
+    it("should test", async function() {
+        expect(true);
+    })
 });
