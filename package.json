@@ -1,7 +1,8 @@
 {
   "name": "presale",
   "scripts": {
-    "test": "npx hardhat test"
+    "test": "npx hardhat test",
+    "coverage": "npx hardhat coverage --testfiles test/*.test.js"
   },
   "devDependencies": {
     "@chainlink/contracts": "^0.2.2",

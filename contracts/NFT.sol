@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "./Presale.sol";
 
-contract Maskbyte is ERC1155 {
+contract NFT is ERC1155 {
     Presale presale;
     
     string revealedURI;
@@ -27,7 +27,7 @@ contract Maskbyte is ERC1155 {
     }
 
     function mint() public {
-        require(presale.getAmount(_msgSender()) == presale.mintPrice(), "Maskbyte: You have not joined presale.");
+        require(presale.getAmount(_msgSender()) == presale.mintPrice(), "NFT: You have not joined presale.");
         address _callee = _msgSender();
         
         for (uint256 i = 0; i < presale.getTotalMembers().length; i++) {
@@ -38,7 +38,7 @@ contract Maskbyte is ERC1155 {
     }
 
     function uri(uint256 _tokenId) override public view returns (string memory) {
-        require(_tokenId < 10000, "Maskbyte: invalid tokenId.");
+        require(_tokenId < 10000, "NFT: invalid tokenId.");
 
         if (block.timestamp <= durationReveal) {
             return string(

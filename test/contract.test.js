@@ -26,7 +26,7 @@ describe("Presale contract", function () {
          */
         this.presale = await Presale.deploy(
             BigNumber.from("5"),
-            ethers.utils.parseEther(BigNumber.from("0.1")),
+            BigNumber.from(ethers.utils.parseEther("0.1")),
             accounts,
             feeList
         );
@@ -163,12 +163,12 @@ describe("Presale contract", function () {
 });
 
 /**
- * @dev Maskbyte.sol unit test
+ * @dev NFT.sol unit test
  */
 describe("NFT contract", function() {
     beforeEach(async function() {
         this.accounts = await ethers.getSigners();
-        const Maskbyte = await ethers.getContractFactory("Maskbyte");
+        const NFT = await ethers.getContractFactory("NFT");
         const Presale = await ethers.getContractFactory("Presale");
 
         /**
@@ -176,7 +176,7 @@ describe("NFT contract", function() {
          */
         this.presale = await Presale.deploy(
             BigNumber.from("5"),
-            ethers.utils.parseEther(BigNumber.from("0.1")),
+            BigNumber.from(ethers.utils.parseEther("0.1")),
             accounts,
             feeList
         );
@@ -184,7 +184,7 @@ describe("NFT contract", function() {
         /**
          * @TODO refactor the placeholder image
          */
-        this.maskbyte = await Maskbyte.deploy(
+        this.nft = await NFT.deploy(
             this.presale.address,
             BigNumber.from("30"),
             "https://a.com/",
