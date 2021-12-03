@@ -1,3 +1,6 @@
 module.exports = {
-    skipFiles: ['RandomNumberConsumer.sol']
+    skipFiles: [
+        'library',
+        'RandomNumberConsumer.sol'
+    ]
 }

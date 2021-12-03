@@ -5,14 +5,6 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const truffleAssert = require("truffle-assertions");
 
-const accounts = [
-    "0x13947a404DF9C36B32dDF78B8087Ea23181c8B32",
-    "0xCB61068c1E905773872551563E41Bf2B373555f5",
-    "0xe10Fea1eF078Cff45e4c6290dB4aE7d27Fe16436"
-];
-
-const feeList = [10, 10, 80];
-
 /**
  * @dev Presale.sol unit test
  */
@@ -27,21 +19,12 @@ describe("Presale contract", function () {
         this.presale = await Presale.deploy(
             BigNumber.from("5"),
             BigNumber.from(ethers.utils.parseEther("0.1")),
-            accounts,
-            feeList
         );
     });
 
     it("should get 0.1 ETH mint price", async function () {
         const mintPrice = await this.presale.mintPrice();
         expect(ethers.utils.parseEther("0.1").eq(mintPrice));
-    });
-
-    accounts.forEach(function (account, i) {
-        it(`should get account #${i} correct fee`, async function () {
-            const _account = await this.presale.royaltyList(account);
-            expect(_account.fee.eq(BigNumber.from(feeList[i])));
-        });
     });
 
     it("should deposit 0.1 ETH and increase totalMembers", async function () {
@@ -90,6 +73,20 @@ describe("Presale contract", function () {
 
     });
 
+    it("should getAmount if the user deposited ether", async function() {
+        const mintPrice = await this.presale.mintPrice();
+        await this.presale.connect(this.accounts[0]).deposit({value: mintPrice});
+
+        const getAmount = await this.presale.getAmount(this.accounts[0].address);
+
+        // 1) check user0 deposit eth
+        expect(mintPrice.eq(getAmount));
+
+        // 2) check user1 who didn't deposit eth
+        const getAmount1 = await this.presale.getAmount(this.accounts[1].address);
+        expect(getAmount1.eq(BigNumber.from("0")));
+    });
+
     it("should fail, if the user deposits more than 0.1 ETH", async function () {
         await truffleAssert.fails(
             this.presale.deposit({
@@ -124,7 +121,7 @@ describe("Presale contract", function () {
         await truffleAssert.fails(
             this.presale.refund(),
             "Presale: You can only claim after the presale ends."
-        )
+        );
     });
 
     it("should fail, if user didn\'t deposit ether", async function () {
@@ -150,7 +147,6 @@ describe("Presale contract", function () {
 
         for (let account of this.accounts) {
             if (total < 5) await this.presale.connect(account).deposit({ value: mintPrice });
-
             if (total == 6) {
                 await truffleAssert.fails(
                     this.presale.connect(account).deposit({ value: mintPrice }),
@@ -160,39 +156,4 @@ describe("Presale contract", function () {
             total++;
         }
     });
-});
-
-/**
- * @dev NFT.sol unit test
- */
-describe("NFT contract", function() {
-    beforeEach(async function() {
-        this.accounts = await ethers.getSigners();
-        const NFT = await ethers.getContractFactory("NFT");
-        const Presale = await ethers.getContractFactory("Presale");
-
-        /**
-         * @dev for testing purpose maximum of 5 NFTs are going to be minted.
-         */
-        this.presale = await Presale.deploy(
-            BigNumber.from("5"),
-            BigNumber.from(ethers.utils.parseEther("0.1")),
-            accounts,
-            feeList
-        );
-
-        /**
-         * @TODO refactor the placeholder image
-         */
-        this.nft = await NFT.deploy(
-            this.presale.address,
-            BigNumber.from("30"),
-            "https://a.com/",
-            "http://b.com/"
-        );
-    });
-
-    it("should test", async function() {
-        expect(true);
-    })
 });

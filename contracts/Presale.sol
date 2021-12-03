@@ -7,11 +7,9 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract Presale is Ownable, ReentrancyGuard {
     uint256 public totalNfts = 10_000;
     uint256 public mintPrice = 0.1 ether;
-    uint256 public totalRoyaltyMembers = 0;
     bool public isPresale = true;
 
     event TransferEther(uint256 amount, address user);
-    event AddRoyalty(uint256 fee, address user);
 
     struct Whitelist {
         uint256 id;
@@ -20,41 +18,23 @@ contract Presale is Ownable, ReentrancyGuard {
         bool isVerified;
     }
 
-    struct RoyaltyList {
-        uint256 id;
-        uint256 fee;
-        uint256 unclaimed;
-        uint256 claimed;
-        bool isVerified;
-    }
-
     Whitelist[] public totalMembers;
-    mapping(address => RoyaltyList) public royaltyList;
+    
     mapping(address => Whitelist) public whitelist;
 
-    constructor(uint256 _totalNfts, uint256 _mintPrice, address[] memory _addresses, uint256[] memory _fee) {
+    constructor(uint256 _totalNfts, uint256 _mintPrice) {
         totalNfts = _totalNfts;
         mintPrice = _mintPrice;
-
-        for (uint256 i = 0; i < _addresses.length; i++) {
-            _addFeeHandler(i, _addresses[i], _fee[i]);
-            totalRoyaltyMembers++;
-        }
     }
 
     receive() external payable {}
-    fallback() external payable {}
-
-    function _addFeeHandler(uint256 _id, address _address, uint256 _fee) internal {
-        royaltyList[_address] = RoyaltyList(_id, _fee, 0, 0, true);
-        emit AddRoyalty(_fee, _address);
-    }
 
     // @TODO implement shuffle
     function shuffle() public onlyOwner{
         require(!isPresale, "Presale: You can only shuffle after the pesale ends.");
     }
 
+    // @TODO implement signed messages to whitelist users
     function deposit() public payable nonReentrant {
         require(!(whitelist[_msgSender()].amount >= mintPrice), "Presale: You already deposit 0.1 ETH.");
         require(totalMembers.length < totalNfts, "Presale: 10,000 positions have been reserved.");
