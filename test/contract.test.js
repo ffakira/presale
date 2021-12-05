@@ -1,8 +1,8 @@
 "use strict";
 
 const { BigNumber } = require("@ethersproject/bignumber");
-const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { expect } = require("chai");
 const truffleAssert = require("truffle-assertions");
 
 const feeList = [
@@ -56,14 +56,14 @@ describe("Presale & NFT contract test", function () {
         expect(ethers.utils.parseEther("0.1").eq(mintPrice));
     });
 
-    accounts.forEach(function (account, i) {
-        if (i < 3) {
-            it(`should get account #${i} correct fee`, async function () {
-                const _account = await this.presale.royaltyList(account);
+    it("should get accounts correct fee", function () {
+        this.accounts.forEach(async (account, i) => {
+            if (i < 3) {
+                const _account = await this.presale.royaltyList(account.address);
                 expect(_account.fee.eq(feeList[i]));
-            });
-        }
-    })
+            }
+        });
+    });
 
     it("should deposit 0.1 ETH and increase totalMembers", async function () {
         // 1) deposit
@@ -126,7 +126,7 @@ describe("Presale & NFT contract test", function () {
         expect(whitelist1["amount"].eq(BigNumber.from("0")));
     });
 
-    it("should get royalty fee for all 3 accounts unclaimed", async function() {
+    it("should get royalty fee for all 3 accounts unclaimed", async function () {
         await depositX(this.accounts, this.presale);
         await this.presale.setNft(this.nft.address);
         await this.presale.connect(this.accounts[0]).mintNft();
