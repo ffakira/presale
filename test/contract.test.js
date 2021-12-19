@@ -145,6 +145,25 @@ describe("Presale & NFT contract test", function () {
         });
     });
 
+    it("should allow to claim royalty", async function () {
+        await depositX(this.accounts, this.presale);
+        await this.presale.connect(this.accounts[0]).setNft(this.nft.address);
+        await this.presale.connect(this.accounts[0]).mintNft();
+
+        // 1) check initial balance for user 80% fees
+        let accountUnclaimed5 = (await this.presale.royaltyList(this.accounts[5].address))["unclaimed"];
+        expect(accountUnclaimed5).to.deep.equal(ethers.utils.parseEther("0.8"));
+
+        // 2) check the state after the royalty have been claimed
+        await this.presale.connect(this.accounts[5]).claim();
+        accountUnclaimed5 = (await this.presale.royaltyList(this.accounts[5].address))["unclaimed"];
+        expect(accountUnclaimed5).to.deep.equal(BigNumber.from("0"));
+
+        // 3) expect the balance of contract be 4.2 ETH
+        const contractBalance = await this.presale.getBalance();
+        expect(contractBalance).to.deep.equal(ethers.utils.parseEther("4.2"));
+    });
+
     it("should set a new uri", async function () {
         await this.nft.connect(this.accounts[0]).setURI("https://b.com/{id}.json");
         const getURI = await this.nft.uri(BigNumber.from("0"));
@@ -260,6 +279,29 @@ describe("Presale & NFT contract test", function () {
         await truffleAssert.fails(
             this.presale.setNft(ethers.constants.AddressZero),
             "Presale: You cannot set to null."
+        );
+    });
+
+    it("should fail, if the royalty tries to claim before the presale", async function () {
+        await truffleAssert.fails(
+            this.presale.connect(this.accounts[5]).claim(),
+            "Presale: You can only claim after the presale ends."
+        );
+    });
+
+    it("should fail, if the royalty tries to claim when no user has minted", async function () {
+        await depositX(this.accounts, this.presale);
+        await truffleAssert.fails(
+            this.presale.connect(this.accounts[5]).claim(),
+            "Presale: There is nothing to claim."
+        );
+    });
+
+    it("should fail, if the user tries to claim royalty fee", async function () {
+        await depositX(this.accounts, this.presale);
+        await truffleAssert.fails(
+            this.presale.connect(this.accounts[0]).claim(),
+            "Presale: Unauthorized access."
         );
     });
 
