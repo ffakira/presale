@@ -5,16 +5,16 @@ const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const truffleAssert = require("truffle-assertions");
 
-const feeList = [
-    BigNumber.from(80),
-    BigNumber.from(10),
-    BigNumber.from(10)
-];
-
 /**
  * @dev Presale.sol unit test
  */
 describe("Presale & NFT contract test", function () {
+    const feeList = [
+        BigNumber.from(80),
+        BigNumber.from(10),
+        BigNumber.from(10)
+    ];
+    
     beforeEach(async function () {
         this.accounts = await ethers.getSigners();
         this.royaltyAccounts = [
@@ -31,7 +31,7 @@ describe("Presale & NFT contract test", function () {
          */
         this.presale = await Presale.deploy(
             BigNumber.from("5"),
-            BigNumber.from(ethers.utils.parseEther("0.1")),
+            BigNumber.from(ethers.utils.parseEther("1")),
             this.royaltyAccounts,
             feeList
         );
@@ -46,61 +46,63 @@ describe("Presale & NFT contract test", function () {
         if (total <= 0 || total > 10) throw new Error("Invalid length account (range 1..10)");
         const mintPrice = await presale.mintPrice();
 
-        accounts.forEach(async (account, i) => {
-            if (i < total) await presale.connect(account).deposit({ value: mintPrice });
-        });
+        for (let i = 0; i < total; i++) {
+            await presale.connect(accounts[i]).deposit({ value: mintPrice });
+        }
     }
 
-    it("should get 0.1 ETH mint price", async function () {
+    it("should get 1 ETH mint price", async function () {
         const mintPrice = await this.presale.mintPrice();
-        expect(ethers.utils.parseEther("0.1").eq(mintPrice));
+        expect(ethers.utils.parseEther("1")).to.equal(mintPrice);
     });
 
     it("should get accounts correct fee", function () {
-        this.accounts.forEach(async (account, i) => {
+        this.royaltyAccounts.forEach(async (account, i) => {
             if (i < 3) {
-                const _account = await this.presale.royaltyList(account.address);
-                expect(_account.fee.eq(feeList[i]));
+                const _account = await this.presale.royaltyList(account);
+                expect(_account.fee).to.equal(feeList[i]);
             }
         });
     });
 
-    it("should deposit 0.1 ETH and increase totalMembers", async function () {
+    it("should deposit 1 ETH and increase totalMembers", async function () {
         // 1) deposit
         const mintPrice = await this.presale.mintPrice();
         await this.presale.deposit({ value: mintPrice });
 
-        const contractBalance = await this.presale.getEtherBalance();
-        expect(mintPrice.eq(contractBalance));
+        const contractBalance = await this.presale.getBalance();
+        expect(mintPrice).to.deep.equal(contractBalance);
 
         // 2) check `totalMembers` length to be 1
         const totalMembers = await this.presale.getTotalMembers();
-        expect(totalMembers.length === 1);
+        expect(totalMembers).to.deep.equal(BigNumber.from("1"));
     });
 
     it("should allow users to refund after presale ends", async function () {
-        // 1) Deposit 0.1 eth for 5 accounts (id 0 to 4)
+        // 1) Deposit 1 eth for 5 accounts (id 0 to 4)
         await depositX(this.accounts, this.presale);
 
         // 2) Check if the id is 4 (last index)
-        expect((await this.presale.whitelist(this.accounts[4].address))["id"].eq(BigNumber.from("4")));
+        const account4 = (await this.presale.whitelist(this.accounts[4].address))["id"];
+        expect(account4).to.deep.equal(BigNumber.from("4"));
 
         // 3) refund the account
         await this.presale.connect(this.accounts[0]).refund();
-        const contractBalance = (await this.presale.whitelist(this.accounts[0].address))["amount"];
+        const whitelistBalance = (await this.presale.whitelist(this.accounts[0].address))["amount"];
+        expect(whitelistBalance).to.deep.equal(BigNumber.from("0"));
 
-        // 4) check the balance is 0
-        expect(contractBalance.eq(BigNumber.from("0")));
+        // 4) Check the smart contract has 4 ETH
+        const contractBalance = await this.presale.getBalance();
+        expect(contractBalance).to.deep.equal(BigNumber.from(ethers.utils.parseEther("4")));
 
-        // 5) check the if the last element, went to the correct index of the refund user
-        expect((await this.presale.whitelist(this.accounts[4].address))["id"].eq(BigNumber.from("0")));
+        // 5) check the if the last id (went to idx: 0), went to the correct index of the refund user
+        expect((await this.presale.whitelist(this.accounts[4].address))["id"]).to.deep.equal(BigNumber.from("0"));
 
         // 6) check the refunded user `isVerified` is set to false
-        expect((await this.presale.whitelist(this.accounts[0].address))["isVerified"] === false);
+        expect((await this.presale.whitelist(this.accounts[0].address))["isVerified"]).to.equal(false);
 
         // 7) check the last user index `isVerified` is set to true
-        expect((await this.presale.whitelist(this.accounts[4].address))["isVerified"] === true);
-
+        expect((await this.presale.whitelist(this.accounts[4].address))["isVerified"]).to.equal(true);
     });
 
     it("should mint a NFT", async function () {
@@ -109,7 +111,7 @@ describe("Presale & NFT contract test", function () {
         await this.presale.connect(this.accounts[0]).mintNft();
 
         const balanceOf = await this.nft.balanceOf(this.accounts[0].address, BigNumber.from("0"));
-        expect(balanceOf.eq(BigNumber.from("1")));
+        expect(balanceOf).to.deep.equal(BigNumber.from("1"));
     });
 
     it("should getAmount if the user deposited ether", async function () {
@@ -119,11 +121,11 @@ describe("Presale & NFT contract test", function () {
         const whitelist = await this.presale.whitelist(this.accounts[0].address);
 
         // 1) check user0 deposit eth
-        expect(mintPrice.eq(whitelist["amount"]));
+        expect(mintPrice).to.deep.equal(whitelist["amount"]);
 
         // 2) check user1 who didn't deposit eth
         const whitelist1 = await this.presale.whitelist(this.accounts[1].address);
-        expect(whitelist1["amount"].eq(BigNumber.from("0")));
+        expect(whitelist1["amount"]).to.deep.equal(BigNumber.from("0"));
     });
 
     it("should get royalty fee for all 3 accounts unclaimed", async function () {
@@ -136,34 +138,34 @@ describe("Presale & NFT contract test", function () {
          */
         this.royaltyAccounts.forEach(async (account, i) => {
             const mintPrice = await this.presale.mintPrice();
-            let fees = BigNumber.from(mintPrice).mul(feeList[i]).div(BigNumber.from("100"));
+            const fees = BigNumber.from(mintPrice).mul(feeList[i]).div(BigNumber.from("100"));
 
-            let royaltyList = await this.presale.royaltyList(account);
-            expect(fees.eq(royaltyList["unclaimed"]));
+            const royaltyList = await this.presale.royaltyList(account);
+            expect(fees).to.deep.equal(royaltyList["unclaimed"]);
         });
     });
 
     it("should set a new uri", async function () {
         await this.nft.connect(this.accounts[0]).setURI("https://b.com/{id}.json");
         const getURI = await this.nft.uri(BigNumber.from("0"));
-        expect(getURI === "https://b.com/{id}.json");
+        expect(getURI).to.equal("https://b.com/{id}.json");
     });
 
-    it("should fail, if the user deposits more than 0.1 ETH", async function () {
+    it("should fail, if the user deposits more than 1 ETH", async function () {
         await truffleAssert.fails(
             this.presale.deposit({
-                value: ethers.utils.parseEther("0.2")
+                value: ethers.utils.parseEther("1.1")
             }),
-            "Presale: 0.1 ETH to mint."
+            "Presale: 1 ETH to mint."
         );
     });
 
-    it("should fail, if the user tries to deposit less than 0.1 ETH", async function () {
+    it("should fail, if the user tries to deposit less than 1 ETH", async function () {
         await truffleAssert.fails(
             this.presale.deposit({
-                value: ethers.utils.parseEther("0.2")
+                value: ethers.utils.parseEther("0.999")
             }),
-            "Presale: 0.1 ETH to mint."
+            "Presale: 1 ETH to mint."
         );
     });
 
@@ -175,7 +177,7 @@ describe("Presale & NFT contract test", function () {
         // 2) second deposit fails
         await truffleAssert.fails(
             this.presale.deposit({ value: mintPrice }),
-            "Presale: You already deposit 0.1 ETH."
+            "Presale: You already deposit 1 ETH."
         );
     });
 
@@ -229,7 +231,7 @@ describe("Presale & NFT contract test", function () {
             if (total == 6) {
                 await truffleAssert.fails(
                     this.presale.connect(account).deposit({ value: mintPrice }),
-                    "Presale: 10,000 positions have been reserved."
+                    "Presale: 1000 positions have been reserved."
                 );
             }
             total++;
