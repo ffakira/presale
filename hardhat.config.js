@@ -30,6 +30,10 @@ module.exports = {
       accounts: [process.env.PRIVATE_KEY]
     },
 
+    ganache: {
+      url: "http://localhost:7545"
+    },
+
     rinkeby: {
       hardfork: "london",
       url: `https://snowy-late-shadow.rinkeby.quiknode.pro/${process.env.API_KEY}/`,

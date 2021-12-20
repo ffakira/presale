@@ -1,59 +1,42 @@
-// const { BigNumber } = require("@ethersproject/bignumber");
-// const { ethers } = require("hardhat");
-// const fs = require("fs").promises;
-// const path = require("path");
+const { BigNumber } = require("@ethersproject/bignumber");
+const { ethers } = require("hardhat");
+const fs = require("fs").promises;
+const path = require("path");
 
-// (async () => {
-// try {
-//     const accounts = [
-//         "0x13947a404DF9C36B32dDF78B8087Ea23181c8B32",
-//         "0xCB61068c1E905773872551563E41Bf2B373555f5",
-//         "0xe10Fea1eF078Cff45e4c6290dB4aE7d27Fe16436"
-//     ];
+(async () => {
+try {
+    const [deployer, royal1, royal2] = await ethers.getSigners();
+    const NFT = await ethers.getContractFactory("NFT");
+    const Presale = await ethers.getContractFactory("Presale");
 
-//     const feeList = [10, 10, 80];
+    /**
+     * @dev Deploying Presale smart contract
+     */
+    const presale = await Presale.deploy(
+        BigNumber.from("10"),
+        BigNumber.from(ethers.utils.parseEther("1")),
+        [deployer.address, royal1.address, royal2.address],
+        [BigNumber.from("80"), BigNumber.from("10"), BigNumber.from("10")]
+    );
 
-//     // const [deployer] = await ethers.getSigners();
+    /**
+     * @dev Deploying NFT smart contract
+     */
+    const nft = await NFT.deploy(
+        presale.address,
+        "https://ipfs.io/ipfs/QmaFf4pmVXai2x5Y6BLUuTc3Nk4SProM3GSS9QBDqyxy7C"
+    );
 
-//     const Presale = await ethers.getContractFactory("Presale");
-//     const Maskbyte = await ethers.getContractFactory("Maskbyte");
-//     const RandomNumberConsumer = await ethers.getContractFactory("RandomNumberConsumer");
+    await fs.writeFile(path.join(__dirname, "/deployed.json"), JSON.stringify({
+        presale: presale.address,
+        nft: nft.address
 
-//     /**
-//      * @dev Deploying Presale smart contract
-//      * @TODO test deployment script, NOT for mainnet
-//      */
-//     const presale = await Presale.deploy(
-//         BigNumber.from("5"),
-//         ethers.utils.parseEther(BigNumber.from("0.1")),
-//         accounts,
-//         feeList
+    }, null, 2));
 
-//     );
+    process.exit(0);
 
-//     /**
-//      * @dev Deploying NFT smart contract
-//      */
-//     const SECONDS = 60;
-//     const maskbyte = await Maskbyte.deploy(
-//         presale.address,
-//         BigNumber.from(`${SECONDS * 60}`),
-//         "https://a.com/",
-//         "https://b.com/"
-//     );
-
-//     await fs.writeFile(path.join(__dirname, "/scripts/deployed.json"), JSON.stringify({
-//         presale: presale.address,
-//         nft: maskbyte.address
-
-//     }));
-
-//     process.exit(0);
-
-// } catch (e) {
-//     console.error(e);
-//     process.exit(1);
-// }
-
-
-// })();
+} catch (e) {
+    console.error(e);
+    process.exit(1);
+}
+})();

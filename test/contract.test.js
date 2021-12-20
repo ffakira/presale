@@ -10,9 +10,9 @@ const truffleAssert = require("truffle-assertions");
  */
 describe("Presale & NFT contract test", function () {
     const feeList = [
-        BigNumber.from(80),
-        BigNumber.from(10),
-        BigNumber.from(10)
+        BigNumber.from("80"),
+        BigNumber.from("10"),
+        BigNumber.from("10")
     ];
     
     beforeEach(async function () {

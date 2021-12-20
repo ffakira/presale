@@ -2,6 +2,7 @@
   "name": "presale",
   "scripts": {
     "test": "npx hardhat coverage --testfiles \"test/**.test.js\"",
+    "deploy": "npx hardhat run scripts/deploy.js --network ganache",
     "gas-report": "npx hardhat test"
   },
   "devDependencies": {
