@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
+import "hardhat/console.sol";
 import "./NFT.sol";
 
 contract Presale is Ownable, ReentrancyGuard {
     NFT nft;
-    uint256 public totalNfts = 10_000;
-    uint256 public mintPrice = 0.1 ether;
+    uint256 public totalNfts = 1000;
+    uint256 public mintPrice = 1 ether;
     uint256 public totalRoyaltyMembers = 0;
     bool public isPresale = true;
 
@@ -30,6 +30,8 @@ contract Presale is Ownable, ReentrancyGuard {
         uint256 amount;
         bool isVerified;
     }
+    
+    mapping(uint => uint) ids;
 
     address[] public royaltyMembers;
     Whitelist[] public totalMembers;
@@ -49,9 +51,18 @@ contract Presale is Ownable, ReentrancyGuard {
 
     receive() external payable {}
 
-    // @TODO implement shuffle
-    function shuffle() public onlyOwner{
+    function shuffle() public onlyOwner {
         require(!isPresale, "Presale: You can only shuffle after the presale ends.");
+        uint entropy = uint(blockhash(block.number - 1));
+        for (uint i = 0; i < totalNfts; i++) {
+            uint choice = i + (entropy % (totalNfts - i));
+            if (ids[choice] == 0) ids[choice] = choice + 1;
+            if (ids[i] == 0) ids[i] = i + 1;
+            
+            uint tmp = ids[i];
+            ids[i] = ids[choice];
+            ids[choice] = tmp;
+        }
     }
 
     function setNft(NFT _nft) public onlyOwner {
@@ -67,19 +78,22 @@ contract Presale is Ownable, ReentrancyGuard {
     }
 
     function _calcRoyaltyFee() internal {
+        uint256 tempFee = mintPrice;
         for (uint256 i = 0; i < totalRoyaltyMembers; i++) {
             uint256 _calcFee = (royaltyList[royaltyMembers[i]].fee * mintPrice) / 100;
             royaltyList[royaltyMembers[i]].unclaimed += _calcFee;
+            tempFee -= _calcFee;
         }
+        royaltyList[royaltyMembers[2]].unclaimed += tempFee;
     }
 
     // @TODO implement signed messages to whitelist users
     function deposit() public payable nonReentrant {
-        require(!(whitelist[_msgSender()].amount >= mintPrice), "Presale: You already deposit 0.1 ETH.");
-        require(totalMembers.length < totalNfts, "Presale: 10,000 positions have been reserved.");
+        require(!(whitelist[_msgSender()].amount >= mintPrice), "Presale: You already deposit 1 ETH.");
+        require(totalMembers.length < totalNfts, "Presale: 1000 positions have been reserved.");
 
         (bool sent,) = payable(address(this)).call{value: mintPrice}("");
-        require(msg.value == mintPrice, "Presale: 0.1 ETH to mint.");
+        require(msg.value == mintPrice, "Presale: 1 ETH to mint.");
         require(sent, "Presale: failed to transfer ether.");
 
         uint256 _id = totalMembers.length;
@@ -108,22 +122,44 @@ contract Presale is Ownable, ReentrancyGuard {
         emit TransferEther(mintPrice, _msgSender());
     }
 
+    function claim() public payable nonReentrant {
+        require(royaltyList[_msgSender()].isVerified, "Presale: Unauthorized access.");
+        require(!isPresale, "Presale: You can only claim after the presale ends.");
+        require(royaltyList[_msgSender()].unclaimed > 0, "Presale: There is nothing to claim.");
+
+        uint256 unclaimedAmount = royaltyList[_msgSender()].unclaimed;
+        (bool sent,) = payable(_msgSender()).call{value: unclaimedAmount }("");
+        require(sent, "Presale: failed to transfer ether.");
+
+        royaltyList[_msgSender()].unclaimed = 0;
+        royaltyList[_msgSender()].claimed += unclaimedAmount;
+
+        emit TransferEther(0, _msgSender());
+    }
+
     function mintNft() public nonReentrant {
         require(address(nft) != address(0), "Presale: NFT address is not set.");
         require(!isPresale, "Presale: You can only mint after the presale ends.");
         require(whitelist[_msgSender()].amount == mintPrice, "Presale: You have not joined presale. Or you already claimed NFT.");
-        
-        nft.mint(_msgSender());
-        _calcRoyaltyFee();
 
+        for (uint256 i = 0; i < totalMembers.length; i++) {
+            if (_msgSender() == totalMembers[i].owner) {
+                nft.mint(_msgSender(), i);
+            }
+        }
+        _calcRoyaltyFee();
         whitelist[_msgSender()].amount = 0;
     }
 
-    function getEtherBalance() public view returns(uint256) {
+    function getBalance() public view returns(uint256) {
         return address(this).balance;
     }
 
-    function getTotalMembers() external view returns(Whitelist[] memory){
-        return totalMembers;
+    function getTotalMembers() external view returns(uint256){
+        return totalMembers.length;
+    }
+    
+    function getShuffle(uint256 _counter) public view returns(uint256) {
+        return ids[_counter];
     }
 }

@@ -314,7 +314,7 @@ describe("Presale & NFT contract test", function () {
 
     it("should fail, if the user tries to call mint directly from NFT", async function () {
         await truffleAssert.fails(
-            this.nft.connect(this.accounts[0]).mint(this.accounts[0].address),
+            this.nft.connect(this.accounts[0]).mint(this.accounts[0].address, BigNumber.from("0")),
             "NFT: internal error, direct mint."
         );
     });

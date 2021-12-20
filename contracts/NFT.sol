@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -17,16 +17,12 @@ contract NFT is ERC1155, Ownable {
         presale = _presale;
     }
 
-    function mint(address _user) external {
-        require(_msgSender() == address(presale), "NFT: internal error, direct mint.");        
-        for (uint256 i = 0; i < presale.getTotalMembers().length; i++) {
-            if(_user == presale.getTotalMembers()[i].owner) {
-                _mint(_user, i, 1, "");
-            }
-        }
-    }
-
     function setURI(string memory _uri) public onlyOwner {
         _setURI(_uri);
+    }
+
+    function mint(address _user, uint256 _id) external {
+        require(_msgSender() == address(presale), "NFT: internal error, direct mint."); 
+        _mint(_user, _id, 1, "");
     }
 }
